@@ -4,7 +4,7 @@
 
 public class Hash extends AbstractHash {
     HashEntry[] table;
-    private DeletedEntry tombstone;
+    private HashEntry tombstone;
 
     // Sizes
     public static final int defaultSize = 32;
@@ -13,7 +13,7 @@ public class Hash extends AbstractHash {
 
     public Hash() {
         table = new HashEntry[defaultSize];
-        tombstone = new DeletedEntry();
+        tombstone = new HashEntry();
 
         currentSize = 0;
         maxSize = (int) (defaultSize * threshold);
@@ -28,16 +28,18 @@ public class Hash extends AbstractHash {
     private int hashCode(String str) {
         int hashVal = 0x811c9dc5;
 
-        for (byte b : str.getBytes()) {
-            hashVal ^= b;
-            hashVal *= 0x01000193;
+        if (str != null) {
+            for (byte b : str.getBytes()) {
+                hashVal ^= b;
+                hashVal *= 0x01000193;
+            }
         }
 
         return hashVal >>> 1;
     }
 
     public void resize(boolean up) {
-        int newSize = up ? 2 * table.length : table.length / 2;
+        int newSize = (int) (table.length * (up ? 2 : .5));
 
         maxSize = (int) (newSize * threshold);
         currentSize = 0;
@@ -52,7 +54,8 @@ public class Hash extends AbstractHash {
     }
 
     public void insert(String key, Object value) {
-        int initialHash = hashCode(key) % table.length;
+        int hashCode = hashCode(key);
+        int initialHash = hashCode % table.length;
         int hash = initialHash;
         int tombstoneIndex = -1;
 
@@ -60,9 +63,9 @@ public class Hash extends AbstractHash {
             // End of probing: null found
             if (table[hash] == null) {
                 if (tombstoneIndex == -1)
-                    table[hash] = new HashEntry(key, value);
+                    table[hash] = new HashEntry(hashCode, key, value);
                 else
-                    table[tombstoneIndex] = new HashEntry(key, value);
+                    table[tombstoneIndex] = new HashEntry(hashCode, key, value);
 
                 currentSize++;
                 if (currentSize >= maxSize)
@@ -72,7 +75,7 @@ public class Hash extends AbstractHash {
             }
 
             // Key exists
-            if (key.equals(table[hash].getKey())) {
+            if (hashCode == table[hash].getHash() && (key == table[hash].getKey() || key.equals(table[hash].getKey()))) {
                 table[hash].setValue(value);
                 return;
             }
@@ -85,21 +88,22 @@ public class Hash extends AbstractHash {
         } while (hash != initialHash);
 
         // End of probing: back to square one
-        table[tombstoneIndex] = new HashEntry(key, value);
+        table[tombstoneIndex] = new HashEntry(hashCode, key, value);
         currentSize++;
         if (currentSize >= maxSize)
             resize(true);
     }
 
     public void delete(String key) {
-        int initialHash = hashCode(key) % table.length;
+        int hashCode = hashCode(key);
+        int initialHash = hashCode % table.length;
         int hash = initialHash;
 
         do {
             if (table[hash] == null)
                 return;
 
-            if (key.equals(table[hash].getKey())) {
+            if (hashCode == table[hash].getHash() && (key == table[hash].getKey() || key.equals(table[hash].getKey()))) {
                 table[hash] = tombstone;
                 currentSize--;
 
@@ -115,14 +119,15 @@ public class Hash extends AbstractHash {
     }
 
     public Object find(String key) {
-        int initialHash = hashCode(key) % table.length;
+        int hashCode = hashCode(key);
+        int initialHash = hashCode % table.length;
         int hash = initialHash;
 
         do {
             if (table[hash] == null)
                 return null;
 
-            if (key.equals(table[hash].getKey()))
+            if (hashCode == table[hash].getHash() && (key == table[hash].getKey() || key.equals(table[hash].getKey())))
                 return table[hash].getValue();
 
             hash = (hash + 1) % table.length;
