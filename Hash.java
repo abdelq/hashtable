@@ -75,7 +75,8 @@ public class Hash extends AbstractHash {
             }
 
             // Key exists
-            if (hashCode == table[hash].getHash() && (key == table[hash].getKey() || key.equals(table[hash].getKey()))) {
+            if (hashCode == table[hash].getHash() &&
+                    (key == table[hash].getKey() || key.equals(table[hash].getKey()))) {
                 table[hash].setValue(value);
                 return;
             }
@@ -103,7 +104,8 @@ public class Hash extends AbstractHash {
             if (table[hash] == null)
                 return;
 
-            if (hashCode == table[hash].getHash() && (key == table[hash].getKey() || key.equals(table[hash].getKey()))) {
+            if (hashCode == table[hash].getHash() &&
+                    (key == table[hash].getKey() || key.equals(table[hash].getKey()))) {
                 table[hash] = tombstone;
                 currentSize--;
 
@@ -127,7 +129,8 @@ public class Hash extends AbstractHash {
             if (table[hash] == null)
                 return null;
 
-            if (hashCode == table[hash].getHash() && (key == table[hash].getKey() || key.equals(table[hash].getKey())))
+            if (hashCode == table[hash].getHash() &&
+                    (key == table[hash].getKey() || key.equals(table[hash].getKey())))
                 return table[hash].getValue();
 
             hash = (hash + 1) % table.length;
